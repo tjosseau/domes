@@ -1,0 +1,34 @@
+
+#------------------------------------------------------#
+# mkprj - Project Architecture Generator               #
+# https://github.com/tjosseau/mkprj                    #
+_VERSION_: 1.2
+#------------------------------------------------------#
+#   0             skip
+#   false         delete
+#   1 true        file
+#   2 *empty*     folder
+#   > (...)       file with inline content
+#   | (...)       file with block content
+#   @path         copy from mkprj modules
+#   ~path         copy from project root
+#   
+#   !file         delete file before creating it anew
+#------------------------------------------------------#
+
+#### Generic architecture ####
+
+# Dependencies #
+    # Frontend package manager
+bower.json: 0
+bower_components: 0
+
+# Documentation #
+readme.md: @README.md
+domes.todo: @blank.todo
+
+domes:
+    domes.js: 1
+
+test:
+    index.html: @index.html
