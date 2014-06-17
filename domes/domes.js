@@ -16,6 +16,7 @@ void function(root) {
 
     var domes,
         NODE_EXISTS = typeof root.Node !== 'undefined',
+        CLASSLIST_EXISTS = "classList" in document.createElement("div"),
         ELEMENT_NODE = 1,
 
         copy = function(context, object)
@@ -25,6 +26,49 @@ void function(root) {
                     context[p] = object[p] ;
             return context ;
         },
+
+        parseAttributes = function(attributes)
+        {
+            var attrs = {},
+                a = attributes.length ;
+            while (a--) attrs[attributes[a].name] = attributes[a].value ;
+            return attrs ;
+        },
+
+        performClasses = CLASSLIST_EXISTS ?
+            function(element, perform, value)
+            {
+                switch (perform) {
+                    case 'a' :
+                        return element.classList.add(value) ;
+                    case 'r' :
+                        return element.classList.remove(value) ;
+                    case 't' :
+                        return element.classList.toggle(value) ;
+                    case 'c' :
+                        return element.classList.contains(value) ;
+                }
+            } :
+            function(element, perform, value)
+            {
+                switch (perform) {
+                    case 'a' :
+                        if (!performClasses(element, 'c', value))
+                            element.className += " "+value ;
+                        break ;
+                    case 'r' :
+                        element.className = element.className.replace(new RegExp('(^|\\s)'+value+'(\\s|$)'), " ").replace(/\s$/, "");
+                        break ;
+                    case 't' :
+                        if (performClasses(element, 'c', value))
+                            performClasses(element, 'a', value) ;
+                        else
+                            performClasses(element, 'r', value) ;
+                        break ;
+                    case 'c' :
+                        return (" "+element.className+" ").indexOf(" "+value+" ") !== -1 ;
+                }
+            },
 
         queryTo = function(elset, query)
         {
@@ -41,6 +85,7 @@ void function(root) {
     {
         this.length = 0 ;
         this.query = "" ;
+        this.events = {} ;
     } ;
     copy(DOMElementSet, {
         prototype:
@@ -227,16 +272,6 @@ void function(root) {
                 return type.toLowerCase() ;
             },
 
-            listen : function(event)
-            {
-
-            },
-
-            forget : function(event)
-            {
-
-            },
-
             outer : function(el)
             {
                 var i = -1 ;
@@ -299,6 +334,8 @@ void function(root) {
 
             append : function(el)
             {
+                var i = -1 ;
+
                 if (typeof el === 'string')
                     while (++i < this.length)
                         this[i].insertAdjacentHTML('beforeend', el) ;
@@ -396,7 +433,181 @@ void function(root) {
                 }
 
                 return this ;
-            }
+            },
+
+            attr : function(obj, value)
+            {
+                var i = -1 ;
+
+                // Getting
+                if (!obj)
+                    return this.length ? parseAttributes(this[0].attributes) : null ;
+                else if (obj === true) {
+                    var attrs = [] ;
+                    while (++i < this.length)
+                        attrs.push(parseAttributes(this[i].attributes)) ;
+                    return attrs ;
+                }
+                // Setting
+                else if (typeof obj === 'string') {
+                    if (value === void 0)
+                        return this.length ? this[0].getAttribute(obj) : null ;
+                    while (++i < this.length) {
+                        if (value !== null) this[i].setAttribute(obj, value) ;
+                        else this[i].removeAttribute(obj) ;
+                    }
+                }
+                else if (typeof obj === 'object') {
+                    while (++i < this.length) {
+                        for (var a in obj) {
+                            if (obj[a] !== null) this[i].setAttribute(a, obj[a]) ;
+                            else this[i].removeAttribute(a) ;
+                        }
+                    }
+                }
+
+                return this ;
+            },
+
+            id : function(value)
+            {
+                // Getting
+                if (!value)
+                    return this.length ? this[0].getAttribute('id') : null ;
+                else if (value === true) {
+                    var i = -1,
+                        ids = [] ;
+                    while (++i < this.length)
+                        ids.push(this[i].getAttribute('id')) ;
+                    return ids ;
+                }
+                // Setting
+                else if (this.length) this[0].setAttribute('id', value.toString()) ;
+
+                return this ;
+            },
+
+            cl : function(name, value)
+            {
+                var i = -1 ;
+
+                if (!name)
+                    return this.length ? this[0].getAttribute('class') : null ;
+                else if (name === true) {
+                    var cls = [] ;
+                    while (++i < this.length)
+                        cls.push(this[i].getAttribute('class')) ;
+                    return cls ;
+                }
+                else if (typeof name === 'string') {
+                    if (value == null)
+                        return this.length ? performClasses(this[0], 'c', name) : null ;
+                    else {
+                        if (value === true)
+                            while (++i < this.length)
+                                performClasses(this[i], 'a', name) ;
+                        else if (value === false)
+                            while (++i < this.length)
+                                performClasses(this[i], 'r', name) ;
+                        else if (value === 'toggle')
+                            while (++i < this.length)
+                                performClasses(this[i], 't', name) ;
+                    }
+                }
+                else if (typeof name === 'object')
+                    for (var c in name) this.cl(c, name[c]) ;
+                else if (this.length)
+                    this[0].setAttribute('id', value.toString()) ;
+
+                return this ;
+            },
+
+            style : function(obj, value)
+            {
+                var i = -1 ;
+
+                // Getting
+                if (!obj)
+                    return this.length ? this[0].getAttribute('class') : null ;
+                else if (obj === true) {
+                    var ss = [] ;
+                    while (++i < this.length)
+                        ss.push(this[i].getAttribute('class')) ;
+                    return ss ;
+                }
+                // Setting
+                else if (typeof obj === 'string') {
+                    if (value === void 0)
+                        return this.length ? this[0].style[obj] : null ;
+                    while (++i < this.length) {
+                        if (value !== null) this[i].style[obj] = value ;
+                        else this[i].style[obj] = "" ;
+                    }
+                }
+                else if (typeof obj === 'object') {
+                    while (++i < this.length) {
+                        for (var a in obj) {
+                            if (obj[a] !== null) this[i].style[a] = obj[a] ;
+                            else this[i].style[a] = "" ;
+                        }
+                    }
+                }
+
+                return this ;
+            },
+
+            on : NODE_EXISTS ?
+                function(event, fn)
+                {
+                    var i = this.length ;
+                    while (i--)
+                        this[i].addEventListener(event, fn, false) ;
+
+                    this.events[event] = fn ;
+
+                    return this ;
+                } :
+                function(event, fn)
+                {
+                    var i = this.length,
+                        _fn = function() {
+                            var e = window.event ;
+                            return fn.call(this, copy(e, {
+                                target : e.srcElement || document,
+                                currentTarget : this,
+                                preventDefault : function() { e.returnValue = false ; },
+                                stopPropagation : function() { e.cancelBubble = true ; }
+                            })) ;
+                        } ;
+                    while (i--)
+                        this[i].attachEvent('on'+event, _fn) ;
+
+                    this.events[event] = _fn ;
+
+                    return this ;
+                },
+
+            off : NODE_EXISTS ?
+                function(event, fn)
+                {
+                    var i = this.length ;
+                    while (i--)
+                        this[i].removeEventListener(event, fn || this.events[event], false) ;
+
+                    delete this.events[event] ;
+
+                    return this ;
+                } :
+                function(event, fn)
+                {
+                    var i = this.length ;
+                    while (i--)
+                        this[i].detachEvent('on'+event, fn || this.events[event]) ;
+
+                    delete this.events[event] ;
+
+                    return this ;
+                }
         }
     }) ;
 
@@ -404,25 +615,39 @@ void function(root) {
 
     } ;
     copy(domes, {
-        create : function(type)
+        create : function(type, ns)
         {
             var elset = new DOMElementSet() ;
-            if (type)
-                switch (type) {
-                    case 'svg' :
-                        elset.add(document.createElementNS("http://www.w3.org/2000/svg", type)) ;
-                        break ;
 
-                    default :
-                        elset.add(document.createElement(type)) ;
-                        break ;
-                }
+            if (type) {
+                if (ns) elset.add(document.createElementNS(ns, type)) ;
+                else
+                    switch (type) {
+                        case 'svg' :
+                            elset.add(document.createElementNS("http://www.w3.org/2000/svg", type)) ;
+                            break ;
+
+                        default :
+                            elset.add(document.createElement(type)) ;
+                            break ;
+                    }
+            }
+
             return elset ;
         },
 
         query : function(query)
         {
             return queryTo(domes.create(), query) ;
+        },
+
+        ready : function(fn)
+        {
+            NODE_EXISTS ?
+                document.addEventListener('DOMContentLoaded', function() { fn() ; }, false) :
+                document.attachEvent("onreadystatechange", function() {
+                    if (document.readyState === 'complete') fn() ;
+                }) ;
         }
     }) ;
 

@@ -29,6 +29,7 @@ domes.todo: @blank.todo
 
 domes:
     domes.js: 1
+    domes.min.js: 1
 
 test:
     index.html: @index.html
