@@ -3,8 +3,8 @@
  * Domes library
  *
  * @author      Thomas Josseau
- * @version     0.0.2
- * @date        2014.06.15
+ * @version     0.0.3
+ * @date        2014.07.01
  * @link        https://github.com/tjosseau/domes
  *
  * @description
@@ -612,7 +612,7 @@ void function(root) {
     }) ;
 
     domes = root.domes = function() {
-
+        return domes.query.apply(domes, arguments) ;
     } ;
     copy(domes, {
         create : function(type, ns)
