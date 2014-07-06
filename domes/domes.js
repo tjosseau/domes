@@ -3,8 +3,8 @@
  * Domes library
  *
  * @author      Thomas Josseau
- * @version     0.0.3
- * @date        2014.07.01
+ * @version     0.0.5
+ * @date        2014.07.07
  * @link        https://github.com/tjosseau/domes
  *
  * @description
@@ -83,9 +83,11 @@ void function(root) {
 
     var DOMElementSet = function()
     {
-        this.length = 0 ;
-        this.query = "" ;
-        this.events = {} ;
+        copy(this, {
+            length : 0,
+            query : "",
+            events : []
+        }) ;
     } ;
     copy(DOMElementSet, {
         prototype:
@@ -98,27 +100,45 @@ void function(root) {
                 return this ;
             },
 
-            remove : function(element)
+            trim : function()
             {
-                var removed = false ;
-                for (var i=0 ; i<this.length ; i++) {
-                    if (removed) {
-                        this[i-1] = this[i] ;
-                        delete this[i] ;
+                if (arguments.length) {
+                    var i,
+                        il = this.length,
+                        children = domes.create().merge(arguments),
+                        ci,
+                        cil = children.length ;
+
+                    for (i=0 ; i<il ; i++) {
+                        for (ci=0 ; ci<cil ; ci++) {
+                            if (this[i] === children[ci]) {
+                                delete this[i] ;
+                                break ;
+                            }
+                        }
                     }
-                    else if (this[i] === element) {
-                        delete this[i] ;
-                        this.length-- ;
-                        removed = true ;
+
+                    for (i=0 ; i<ci ; i++) {
+                        if (!this[i]) {
+                            if (i !== ci-1) this[i] = this[i+1] ;
+                            this.length-- ;
+                        }
                     }
                 }
+                else
+                    while (this.length)
+                        delete this[--this.length] ;
 
                 return this ;
             },
 
-            empty : function()
+            remove : function()
             {
-                while (this.length) delete this[--this.length] ;
+                var child,
+                    i = this.length ;
+                while (i--)
+                    if ((child = this[i]).parentNode)
+                        child.parentNode.removeChild(child) ;
 
                 return this ;
             },
@@ -137,9 +157,17 @@ void function(root) {
                     e,
                     el ;
                 while ((el = arguments[++a])) {
-                    el = el.length ;
-                    e = 0 ;
-                    while (e < el) this.add(arguments[a][e++]) ;
+                    if (el instanceof DOMElementSet) {
+                        el = el.length ;
+                        e = 0 ;
+                        while (e < el) this.add(arguments[a][e++]) ;
+                    }
+                    else if (el.length > -1) {
+                        el = el.length ;
+                        e = 0 ;
+                        while (e < el) this.merge(arguments[a][e++]) ;
+                    }
+                    else this.add(arguments[a]) ;
                 }
 
                 return this ;
@@ -276,7 +304,7 @@ void function(root) {
             {
                 var i = -1 ;
 
-                if (!el || el === true) {
+                if (e == null || el === true) {
                     if (!this.length) return null ;
                     var htmls = [] ;
                     while (++i < this.length)
@@ -306,7 +334,7 @@ void function(root) {
             {
                 var i = -1 ;
 
-                if (!el || el === true) {
+                if (el == null || el === true) {
                     if (!this.length) return null ;
                     var htmls = [] ;
                     while (++i < this.length)
@@ -332,6 +360,13 @@ void function(root) {
                 return this ;
             },
 
+            empty : function()
+            {
+                this.inner("") ;
+
+                return this ;
+            },
+
             append : function(el)
             {
                 var i = -1 ;
@@ -353,6 +388,13 @@ void function(root) {
                 return this ;
             },
 
+            appendTo : function(el)
+            {
+                domes(el).append(this) ;
+
+                return this ;
+            },
+
             prepend : function(el)
             {
                 var i = -1 ;
@@ -370,6 +412,13 @@ void function(root) {
                                 target.insertBefore(el[i], target.firstChild) ;
                     }
                 }
+
+                return this ;
+            },
+
+            prependTo : function(el)
+            {
+                domes(el).prepend(this) ;
 
                 return this ;
             },
@@ -607,14 +656,77 @@ void function(root) {
                     delete this.events[event] ;
 
                     return this ;
+                },
+
+            focus : function()
+            {
+                var l = this.length ;
+                while (l--)
+                    this[l].focus() ;
+
+                return this ;
+            },
+
+            blur : function()
+            {
+                var l = this.length ;
+                while (l--)
+                    this[l].blur() ;
+
+                return this ;
+            },
+
+            bounds : function(arrayOrCalc)
+            {
+                if (!this.length) return null ;
+
+                else if (arrayOrCalc === true) {
+                    var i = 0,
+                        l = this.length,
+                        bounds = [] ;
+                    while (i++ < l)
+                        bounds.push(this[i].getBoundingClientRect()) ;
+                    return bounds ;
                 }
+                else if (arrayOrCalc === false) {
+                    var i = this.length-1,
+                        iBounds = this[i].getBoundingClientRect(),
+                        t = iBounds.top,
+                        r = iBounds.right,
+                        b = iBounds.bottom,
+                        l = iBounds.left ;
+                    while (i--) {
+                        iBounds = this[i].getBoundingClientRect() ;
+                        if (iBounds.top < t) t = iBounds.top ;
+                        if (iBounds.right > r) r = iBounds.right ;
+                        if (iBounds.bottom > b) b = iBounds.bottom ;
+                        if (iBounds.left < l) l = iBounds.left ;
+                    }
+                    // Returns a ClientRect type.
+                    return copy(iBounds, {
+                        top : t,
+                        right : r,
+                        bottom : b,
+                        left : l,
+                        width : r-l,
+                        height : b-t
+                    }) ;
+                }
+                else
+                    return this[0].getBoundingClientRect() ;
+            }
         }
     }) ;
 
-    domes = root.domes = function() {
-        return domes.query.apply(domes, arguments) ;
+    domes = root.domes = function(arg) {
+        if (typeof arg === 'string')
+            return domes.query.apply(domes, arguments) ;
+        else
+            return domes.gather.apply(domes, arguments) ;
     } ;
     copy(domes, {
+        fn : DOMElementSet.prototype,
+
         create : function(type, ns)
         {
             var elset = new DOMElementSet() ;
@@ -636,9 +748,14 @@ void function(root) {
             return elset ;
         },
 
+        gather : function()
+        {
+            return new DOMElementSet().merge(arguments) ;
+        },
+
         query : function(query)
         {
-            return queryTo(domes.create(), query) ;
+            return queryTo(new DOMElementSet(), query) ;
         },
 
         ready : function(fn)
