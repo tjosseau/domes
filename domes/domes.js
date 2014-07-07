@@ -3,7 +3,7 @@
  * Domes library
  *
  * @author      Thomas Josseau
- * @version     0.0.6
+ * @version     0.0.7
  * @date        2014.07.07
  * @link        https://github.com/tjosseau/domes
  *
@@ -78,7 +78,6 @@ void function(root) {
                 rl = result.length ;
             elset.length = rl ;
             while(rl--) elset[rl] = result[rl] ;
-            elset.query = query ;
 
             return elset ;
         } ;
@@ -87,7 +86,6 @@ void function(root) {
     {
         copy(this, {
             length : 0,
-            query : "",
             events : []
         }) ;
     } ;
@@ -141,16 +139,6 @@ void function(root) {
                 while (i--)
                     if ((child = this[i]).parentNode)
                         child.parentNode.removeChild(child) ;
-
-                return this ;
-            },
-
-            update : function()
-            {
-                if (this.query) {
-                    this.empty() ;
-                    queryTo(this.root, this, this.query) ;
-                }
 
                 return this ;
             },
@@ -309,7 +297,7 @@ void function(root) {
                     return set ;
                 },
             
-            select : function(query)
+            query : function(query)
             {
                 var set = new DOMElementSet(),
                     l = this.length-1,
