@@ -3,7 +3,7 @@
  * Domes library
  *
  * @author      Thomas Josseau
- * @version     0.0.5
+ * @version     0.0.6
  * @date        2014.07.07
  * @link        https://github.com/tjosseau/domes
  *
@@ -57,7 +57,9 @@ void function(root) {
                             element.className += " "+value ;
                         break ;
                     case 'r' :
-                        element.className = element.className.replace(new RegExp('(^|\\s)'+value+'(\\s|$)'), " ").replace(/\s$/, "");
+                        element.className = element.className.replace(
+                            new RegExp('(^|\\s)'+value+'(\\s|$)'), " "
+                        ).replace(/\s$/, "") ;
                         break ;
                     case 't' :
                         if (performClasses(element, 'c', value))
@@ -70,9 +72,9 @@ void function(root) {
                 }
             },
 
-        queryTo = function(elset, query)
+        queryTo = function(root, elset, query)
         {
-            var result = document.querySelectorAll(query),
+            var result = root.querySelectorAll(query),
                 rl = result.length ;
             elset.length = rl ;
             while(rl--) elset[rl] = result[rl] ;
@@ -105,7 +107,7 @@ void function(root) {
                 if (arguments.length) {
                     var i,
                         il = this.length,
-                        children = domes.create().merge(arguments),
+                        children = new DOMElementSet().merge(arguments),
                         ci,
                         cil = children.length ;
 
@@ -126,8 +128,8 @@ void function(root) {
                     }
                 }
                 else
-                    while (this.length)
-                        delete this[--this.length] ;
+                    while (this.length--)
+                        delete this[this.length] ;
 
                 return this ;
             },
@@ -145,29 +147,32 @@ void function(root) {
 
             update : function()
             {
-                this.empty() ;
-                if (this.query) queryTo(this, this.query) ;
+                if (this.query) {
+                    this.empty() ;
+                    queryTo(this.root, this, this.query) ;
+                }
 
                 return this ;
             },
 
-            merge : function(elset)
+            merge : function()
             {
                 var a = -1,
-                    e,
-                    el ;
+                    l,
+                    el,
+                    e ;
                 while ((el = arguments[++a])) {
                     if (el instanceof DOMElementSet) {
-                        el = el.length ;
-                        e = 0 ;
-                        while (e < el) this.add(arguments[a][e++]) ;
+                        l = el.length-1 ;
+                        e = -1 ;
+                        while (e++ < l) this.add(arguments[a][e]) ;
                     }
                     else if (el.length > -1) {
-                        el = el.length ;
-                        e = 0 ;
-                        while (e < el) this.merge(arguments[a][e++]) ;
+                        l = el.length-1 ;
+                        e = -1 ;
+                        while (e++ < l) this.merge(arguments[a][e]) ;
                     }
-                    else this.add(arguments[a]) ;
+                    else this.add(el) ;
                 }
 
                 return this ;
@@ -175,7 +180,7 @@ void function(root) {
 
             get : function(i)
             {
-                return domes.create().add(this[i]) ;
+                return new DOMElementSet().add(this[i]) ;
             },
 
             contains : function(element)
@@ -205,33 +210,48 @@ void function(root) {
             elements : function()
             {
                 var els = [],
-                    e = 0 ;
-                while (e < this.length)
-                    els.push(this[e++]) ;
+                    l = this.length-1,
+                    e = -1 ;
+                while (e++ < l)
+                    els.push(this[e]) ;
 
                 return els ;
+            },
+            
+            each : function(fn)
+            {
+                var l = this.length-1,
+                    e = -1 ;
+                while (e++ < l)
+                    fn.call(this[e], this[e], e) ;
+                    
+                return this ;
             },
 
             parent : function()
             {
-                var set = domes.create(),
-                    i = 0 ;
-                while (i < this.length)
-                    set.add(this[i++].parentNode) ;
+                var set = new DOMElementSet(),
+                    l = this.length-1,
+                    e = -1 ;
+                while (e++ < l)
+                    set.add(this[echo(e)].parentNode) ;
 
                 return set ;
             },
 
             children : function()
             {
-                var set = domes.create(),
+                var set = new DOMElementSet(),
+                    l = this.length-1,
                     c,
                     cl,
-                    i = -1 ;
-                while (++i < this.length) {
+                    el,
+                    e = -1 ;
+                while (e++ < l) {
+                    el = this[e] ;
                     c = -1 ;
-                    cl = this[i].childNodes.length ;
-                    while (c++ < cl) set.add(this[i].childNodes[c]) ;
+                    cl = el.childNodes.length ;
+                    while (c++ < cl) set.add(el.childNodes[c]) ;
                 }
 
                 return set ;
@@ -240,20 +260,22 @@ void function(root) {
             next : NODE_EXISTS ?
                 function()
                 {
-                    var set = domes.create(),
-                        i = -1 ;
-                    while (++i < this.length)
-                        set.add(this[i].nextElementSibling) ;
+                    var set = new DOMElementSet(),
+                        l = this.length-1,
+                        e = -1 ;
+                    while (e++ < l)
+                        set.add(this[e].nextElementSibling) ;
 
                     return set ;
                 } :
                 function()
                 {
-                    var set = domes.create(),
+                    var set = new DOMElementSet(),
+                        l = this.length-1,
                         el,
-                        i = -1 ;
-                    while (++i < this.length) {
-                        el = this[i] ;
+                        e = -1 ;
+                    while (e++ < l) {
+                        el = this[e] ;
                         do { el = el.nextSibling ; } while (el && el.nodeType !== ELEMENT_NODE) ;
                         set.add(el) ;
                     }
@@ -264,98 +286,113 @@ void function(root) {
             previous : NODE_EXISTS ?
                 function()
                 {
-                    var set = domes.create(),
-                        i = -1 ;
-                    while (++i < this.length)
-                        set.add(this[i].previousElementSibling) ;
+                    var set = new DOMElementSet(),
+                        l = this.length-1,
+                        e = -1 ;
+                    while (e++ < l)
+                        set.add(this[e].previousElementSibling) ;
 
                     return set ;
                 } :
                 function()
                 {
-                    var set = domes.create(),
+                    var set = new DOMElementSet(),
+                        l = this.length-1,
                         el,
-                        i = -1 ;
-                    while (++i < this.length) {
-                        el = this[i] ;
+                        e = -1 ;
+                    while (e++ < l) {
+                        el = this[e] ;
                         do { el = el.previousSibling ; } while (el && el.nodeType !== ELEMENT_NODE) ;
                         set.add(el) ;
                     }
 
                     return set ;
                 },
+            
+            select : function(query)
+            {
+                var set = new DOMElementSet(),
+                    l = this.length-1,
+                    e = -1 ;
+                
+                while (e++ < l)
+                    queryTo(this[e], set, query) ;
+                
+                return set ;
+            },
 
             type : function()
             {
                 if (!this.length) return '' ;
 
                 var l = this.length,
-                    e,
+                    el,
                     type ;
                 while (l--) {
-                    e = this[l] ;
-                    if (type && e.tagName !== type) return '*' ;
-                    else type = e.tagName ;
+                    el = this[l] ;
+                    if (type && el.tagName !== type) return '*' ;
+                    else type = el.tagName ;
                 }
+
                 return type.toLowerCase() ;
             },
 
             outer : function(el)
             {
-                var i = -1 ;
+                var l = this.length-1,
+                    e = -1 ;
 
-                if (e == null || el === true) {
-                    if (!this.length) return null ;
+                if (el == null || el === true) {
+                    if (l === -1) return null ;
                     var htmls = [] ;
-                    while (++i < this.length)
-                        htmls.push(this[i].outerHTML) ;
+                    while (e++ < l)
+                        htmls.push(this[e].outerHTML) ;
+
                     return el === true ? htmls : htmls.join("") ;
                 }
 
                 if (typeof el === 'string')
-                    while (++i < this.length)
-                        this[i].outerHTML = el ;
-                else {
-                    if (el.nodeType === ELEMENT_NODE)
-                        while (++i < this.length)
-                            this[i].outerHTML = el.outerHTML ;
-                    else if (el instanceof DOMElementSet)
-                        while (++i < this.length)
-                            this[i].outerHTML = el.outer() ;
-                    else
-                        while (++i < this.length)
-                            this[i].outerHTML = el.toString() ;
-                }
+                    while (e++ < l)
+                        this[e].outerHTML = el ;
+                else if (el.nodeType === ELEMENT_NODE)
+                    while (e++ < l)
+                        this[e].outerHTML = el.outerHTML ;
+                else if (el instanceof DOMElementSet)
+                    while (e++ < l)
+                        this[e].outerHTML = el.outer() ;
+                else
+                    while (e++ < l)
+                        this[e].outerHTML = el.toString() ;
 
                 return this ;
             },
 
             inner : function(el)
             {
-                var i = -1 ;
+                var l = this.length-1,
+                    e = -1 ;
 
                 if (el == null || el === true) {
-                    if (!this.length) return null ;
+                    if (l === -1) return null ;
                     var htmls = [] ;
-                    while (++i < this.length)
-                        htmls.push(this[i].innerHTML) ;
+                    while (e++ < l)
+                        htmls.push(this[e].innerHTML) ;
+
                     return el === true ? htmls : htmls.join("") ;
                 }
 
                 if (typeof el === 'string')
-                    while (++i < this.length)
-                        this[i].innerHTML = el ;
-                else {
-                    if (el.nodeType === ELEMENT_NODE)
-                        while (++i < this.length)
-                            this[i].innerHTML = el.outerHTML ;
-                    else if (el instanceof DOMElementSet)
-                        while (++i < this.length)
-                            this[i].innerHTML = el.outer() ;
-                    else
-                        while (++i < this.length)
-                            this[i].innerHTML = el.toString() ;
-                }
+                    while (e++ < l)
+                        this[e].innerHTML = el ;
+                else if (el.nodeType === ELEMENT_NODE)
+                    while (e++ < l)
+                        this[e].innerHTML = el.outerHTML ;
+                else if (el instanceof DOMElementSet)
+                    while (e++ < l)
+                        this[e].innerHTML = el.outer() ;
+                else
+                    while (e++ < l)
+                        this[e].innerHTML = el.toString() ;
 
                 return this ;
             },
@@ -369,18 +406,19 @@ void function(root) {
 
             append : function(el)
             {
-                var i = -1 ;
+                var l = this.length-1,
+                    e = -1 ;
 
                 if (typeof el === 'string')
-                    while (++i < this.length)
-                        this[i].insertAdjacentHTML('beforeend', el) ;
+                    while (e++ < l)
+                        this[e].insertAdjacentHTML('beforeend', el) ;
                 else {
+                    var target = this[l] ;
                     if (el.nodeType === ELEMENT_NODE)
-                        this[this.length-1].appendChild(el) ;
+                        target.appendChild(el) ;
                     else if (el instanceof DOMElementSet) {
-                        var target = this[this.length-1],
-                            e = -1 ;
-                        while (++e < el.length)
+                        l = el.length-1 ;
+                        while (e++ < l)
                             target.appendChild(el[e]) ;
                     }
                 }
@@ -397,19 +435,20 @@ void function(root) {
 
             prepend : function(el)
             {
-                var i = -1 ;
+                var l = this.length-1,
+                    e = -1 ;
 
                 if (typeof el === 'string')
-                    while (++i < this.length)
-                        this[i].insertAdjacentHTML('afterbegin', el) ;
+                    while (e++ < l)
+                        this[e].insertAdjacentHTML('afterbegin', el) ;
                 else {
-                    var target = this[this.length-1] ;
+                    var target = this[l] ;
                     if (el.nodeType === ELEMENT_NODE)
                         target.insertBefore(el, target.firstChild) ;
                     else if (el instanceof DOMElementSet) {
-                        if ((i = el.length))
-                            while (i--)
-                                target.insertBefore(el[i], target.firstChild) ;
+                        e = el.length ;
+                        while (e--)
+                            target.insertBefore(el[e], target.firstChild) ;
                     }
                 }
 
@@ -425,19 +464,20 @@ void function(root) {
 
             before : function(el)
             {
-                var i = -1 ;
+                var l = this.length-1,
+                    e = -1 ;
 
                 if (typeof el === 'string')
-                    while (++i < this.length)
-                        this[i].insertAdjacentHTML('beforebegin', el) ;
+                    while (e++ < l)
+                        this[e].insertAdjacentHTML('beforebegin', el) ;
                 else {
-                    var target = this[this.length-1] ;
+                    var target = this[l] ;
                     if (el.nodeType === ELEMENT_NODE)
                         target.parentNode.insertBefore(el, target) ;
                     else if (el instanceof DOMElementSet) {
-                        if ((i = el.length))
-                            while (i--)
-                                target.parentNode.insertBefore(el[i], target) ;
+                        e = el.length ;
+                        while (e--)
+                            target.parentNode.insertBefore(el[e], target) ;
                     }
                 }
 
@@ -446,19 +486,20 @@ void function(root) {
 
             after : function(el)
             {
-                var i = -1 ;
+                var l = this.length-1,
+                    e = -1 ;
 
                 if (typeof el === 'string')
-                    while (++i < this.length)
-                        this[i].insertAdjacentHTML('afterend', el) ;
+                    while (e++ < l)
+                        this[e].insertAdjacentHTML('afterend', el) ;
                 else {
-                    var target = this[this.length-1] ;
+                    var target = this[l] ;
                     if (el.nodeType === ELEMENT_NODE)
                         target.parentNode.insertBefore(el, target.nextSibling) ;
                     else if (el instanceof DOMElementSet) {
-                        if ((i = el.length))
-                            while (i--)
-                                target.parentNode.insertBefore(el[i], target.nextSibling) ;
+                        e = el.length ;
+                        while (e--)
+                            target.parentNode.insertBefore(el[e], target.nextSibling) ;
                     }
                 }
 
@@ -467,17 +508,18 @@ void function(root) {
 
             text : function(str)
             {
-                var i = -1 ;
+                var l = this.length-1,
+                    e = -1 ;
 
                 if (typeof str === 'string')
-                    while (++i < this.length)
-                        this[i].innerText = str ;
+                    while (e++ < l)
+                        this[e].innerText = str ;
                 else {
-                    if (!this.length) return null ;
+                    if (l === -1) return null ;
 
                     var texts = [] ;
-                    while (++i < this.length)
-                        texts.push(this[i].innerText) ;
+                    while (e++ < l)
+                        texts.push(this[e].innerText) ;
                     return str === true ? texts : texts.join("") ;
                 }
 
@@ -486,31 +528,35 @@ void function(root) {
 
             attr : function(obj, value)
             {
-                var i = -1 ;
+                var l = this.length-1,
+                    e = -1 ;
 
-                // Getting
                 if (!obj)
-                    return this.length ? parseAttributes(this[0].attributes) : null ;
+                    return l > -1 ? parseAttributes(this[0].attributes) : null ;
+
                 else if (obj === true) {
                     var attrs = [] ;
-                    while (++i < this.length)
-                        attrs.push(parseAttributes(this[i].attributes)) ;
+                    while (e++ < l)
+                        attrs.push(parseAttributes(this[e].attributes)) ;
                     return attrs ;
                 }
-                // Setting
+
                 else if (typeof obj === 'string') {
                     if (value === void 0)
-                        return this.length ? this[0].getAttribute(obj) : null ;
-                    while (++i < this.length) {
-                        if (value !== null) this[i].setAttribute(obj, value) ;
-                        else this[i].removeAttribute(obj) ;
-                    }
+                        return l > -1 ? this[0].getAttribute(obj) : null ;
+                    else if (value === null)
+                        while (e++ < l)
+                            this[e].removeAttribute(obj) ;
+                    else
+                        while (e++ < l)
+                            this[e].setAttribute(obj, value) ;
                 }
+
                 else if (typeof obj === 'object') {
-                    while (++i < this.length) {
+                    while (e++ < l) {
                         for (var a in obj) {
-                            if (obj[a] !== null) this[i].setAttribute(a, obj[a]) ;
-                            else this[i].removeAttribute(a) ;
+                            if (obj[a] === null) this[e].removeAttribute(a) ;
+                            else this[e].setAttribute(a, obj[a]) ;
                         }
                     }
                 }
@@ -523,29 +569,33 @@ void function(root) {
                 // Getting
                 if (!value)
                     return this.length ? this[0].getAttribute('id') : null ;
-                else if (value === true) {
-                    var i = -1,
+
+                if (value === true) {
+                    var e = -1,
+                        l = this.length-1,
                         ids = [] ;
-                    while (++i < this.length)
-                        ids.push(this[i].getAttribute('id')) ;
+                    while (e++ < l)
+                        ids.push(this[e].getAttribute('id')) ;
                     return ids ;
                 }
                 // Setting
-                else if (this.length) this[0].setAttribute('id', value.toString()) ;
+                if (this.length) this[0].setAttribute('id', value.toString()) ;
 
                 return this ;
             },
 
             cl : function(name, value)
             {
-                var i = -1 ;
-
                 if (!name)
                     return this.length ? this[0].getAttribute('class') : null ;
-                else if (name === true) {
+
+                var l = this.length-1,
+                    e = -1 ;
+
+                if (name === true) {
                     var cls = [] ;
-                    while (++i < this.length)
-                        cls.push(this[i].getAttribute('class')) ;
+                    while (e++ < l)
+                        cls.push(this[e].getAttribute('class')) ;
                     return cls ;
                 }
                 else if (typeof name === 'string') {
@@ -553,51 +603,53 @@ void function(root) {
                         return this.length ? performClasses(this[0], 'c', name) : null ;
                     else {
                         if (value === true)
-                            while (++i < this.length)
-                                performClasses(this[i], 'a', name) ;
+                            while (e++ < l)
+                                performClasses(this[e], 'a', name) ;
                         else if (value === false)
-                            while (++i < this.length)
-                                performClasses(this[i], 'r', name) ;
+                            while (e++ < l)
+                                performClasses(this[e], 'r', name) ;
                         else if (value === 'toggle')
-                            while (++i < this.length)
-                                performClasses(this[i], 't', name) ;
+                            while (e++ < l)
+                                performClasses(this[e], 't', name) ;
                     }
                 }
                 else if (typeof name === 'object')
                     for (var c in name) this.cl(c, name[c]) ;
-                else if (this.length)
-                    this[0].setAttribute('id', value.toString()) ;
 
                 return this ;
             },
 
             style : function(obj, value)
             {
-                var i = -1 ;
-
                 // Getting
                 if (!obj)
-                    return this.length ? this[0].getAttribute('class') : null ;
-                else if (obj === true) {
+                    return this.length ? this[0].getAttribute('style') : null ;
+
+                var l = this.length-1,
+                    e = -1 ;
+
+                if (obj === true) {
                     var ss = [] ;
-                    while (++i < this.length)
-                        ss.push(this[i].getAttribute('class')) ;
+                    while (e++ < l)
+                        ss.push(this[e].getAttribute('style')) ;
                     return ss ;
                 }
                 // Setting
                 else if (typeof obj === 'string') {
                     if (value === void 0)
-                        return this.length ? this[0].style[obj] : null ;
-                    while (++i < this.length) {
-                        if (value !== null) this[i].style[obj] = value ;
-                        else this[i].style[obj] = "" ;
-                    }
+                        return l > -1 ? this[0].style[obj] : null ;
+                    if (value === null)
+                        while (e++ < l)
+                            this[e].style[obj] = "" ;
+                    else
+                        while (e++ < l)
+                            this[e].style[obj] = value ;
                 }
                 else if (typeof obj === 'object') {
-                    while (++i < this.length) {
+                    while (e++ < l) {
                         for (var a in obj) {
-                            if (obj[a] !== null) this[i].style[a] = obj[a] ;
-                            else this[i].style[a] = "" ;
+                            if (obj[a] === null) this[e].style[a] = "" ;
+                            else this[e].style[a] = obj[a] ;
                         }
                     }
                 }
@@ -608,9 +660,9 @@ void function(root) {
             on : NODE_EXISTS ?
                 function(event, fn)
                 {
-                    var i = this.length ;
-                    while (i--)
-                        this[i].addEventListener(event, fn, false) ;
+                    var l = this.length ;
+                    while (l--)
+                        this[l].addEventListener(event, fn, false) ;
 
                     this.events[event] = fn ;
 
@@ -618,7 +670,7 @@ void function(root) {
                 } :
                 function(event, fn)
                 {
-                    var i = this.length,
+                    var l = this.length,
                         _fn = function() {
                             var e = window.event ;
                             return fn.call(this, copy(e, {
@@ -628,8 +680,8 @@ void function(root) {
                                 stopPropagation : function() { e.cancelBubble = true ; }
                             })) ;
                         } ;
-                    while (i--)
-                        this[i].attachEvent('on'+event, _fn) ;
+                    while (l--)
+                        this[l].attachEvent('on'+event, _fn) ;
 
                     this.events[event] = _fn ;
 
@@ -639,9 +691,9 @@ void function(root) {
             off : NODE_EXISTS ?
                 function(event, fn)
                 {
-                    var i = this.length ;
-                    while (i--)
-                        this[i].removeEventListener(event, fn || this.events[event], false) ;
+                    var l = this.length ;
+                    while (l--)
+                        this[l].removeEventListener(event, fn || this.events[event], false) ;
 
                     delete this.events[event] ;
 
@@ -649,9 +701,9 @@ void function(root) {
                 } :
                 function(event, fn)
                 {
-                    var i = this.length ;
-                    while (i--)
-                        this[i].detachEvent('on'+event, fn || this.events[event]) ;
+                    var l = this.length ;
+                    while (l--)
+                        this[l].detachEvent('on'+event, fn || this.events[event]) ;
 
                     delete this.events[event] ;
 
@@ -679,41 +731,62 @@ void function(root) {
             bounds : function(arrayOrCalc)
             {
                 if (!this.length) return null ;
-
-                else if (arrayOrCalc === true) {
-                    var i = 0,
-                        l = this.length,
-                        bounds = [] ;
-                    while (i++ < l)
-                        bounds.push(this[i].getBoundingClientRect()) ;
-                    return bounds ;
+                
+                var l = this.length-1,
+                    bounds ;
+                if (arrayOrCalc === true) {
+                    var e = -1,
+                        boundsArray = [] ;
+                    while (e++ < l) {
+                        bounds = this[e].getBoundingClientRect() ;
+                        if (NODE_EXISTS) boundsArray.push(bounds) ;
+                        else boundsArray.push({
+                            top : bounds.top,
+                            right : bounds.right,
+                            bottom : bounds.bottom,
+                            left : bounds.left,
+                            width : bounds.right - bounds.left,
+                            height : bounds.bottom - bounds.top
+                        }) ;
+                    }
+                    return boundsArray ;
                 }
                 else if (arrayOrCalc === false) {
-                    var i = this.length-1,
-                        iBounds = this[i].getBoundingClientRect(),
-                        t = iBounds.top,
-                        r = iBounds.right,
-                        b = iBounds.bottom,
-                        l = iBounds.left ;
-                    while (i--) {
-                        iBounds = this[i].getBoundingClientRect() ;
-                        if (iBounds.top < t) t = iBounds.top ;
-                        if (iBounds.right > r) r = iBounds.right ;
-                        if (iBounds.bottom > b) b = iBounds.bottom ;
-                        if (iBounds.left < l) l = iBounds.left ;
+                    bounds = this[l].getBoundingClientRect() ;
+                    
+                    var t = bounds.top,
+                        r = bounds.right,
+                        b = bounds.bottom,
+                        l = bounds.left ;
+                    while (l--) {
+                        bounds = this[l].getBoundingClientRect() ;
+                        if (bounds.top < t) t = bounds.top ;
+                        if (bounds.right > r) r = bounds.right ;
+                        if (bounds.bottom > b) b = bounds.bottom ;
+                        if (bounds.left < l) l = bounds.left ;
                     }
                     // Returns a ClientRect type.
-                    return copy(iBounds, {
+                    return {
                         top : t,
                         right : r,
                         bottom : b,
                         left : l,
                         width : r-l,
                         height : b-t
-                    }) ;
+                    } ;
                 }
-                else
-                    return this[0].getBoundingClientRect() ;
+                else {
+                    bounds = this[0].getBoundingClientRect() ;
+                    if (NODE_EXISTS) return bounds ;
+                    else return {
+                        top : bounds.top,
+                        right : bounds.right,
+                        bottom : bounds.bottom,
+                        left : bounds.left,
+                        width : bounds.right - bounds.left,
+                        height : bounds.bottom - bounds.top
+                    } ;
+                }
             }
         }
     }) ;
@@ -755,7 +828,7 @@ void function(root) {
 
         query : function(query)
         {
-            return queryTo(new DOMElementSet(), query) ;
+            return queryTo(document, new DOMElementSet(), query) ;
         },
 
         ready : function(fn)
