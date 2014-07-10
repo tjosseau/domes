@@ -3,8 +3,8 @@
  * Domes library
  *
  * @author      Thomas Josseau
- * @version     0.0.7
- * @date        2014.07.07
+ * @version     0.0.8
+ * @date        2014.07.10
  * @link        https://github.com/tjosseau/domes
  *
  * @description
@@ -107,27 +107,24 @@ void function(root) {
                         il = this.length,
                         children = new DOMElementSet().merge(arguments),
                         ci,
-                        cil = children.length ;
+                        cil = children.length,
+                        deleted = [] ;
 
-                    for (i=0 ; i<il ; i++) {
-                        for (ci=0 ; ci<cil ; ci++) {
+                    for (i=0 ; i<il ; i++)
+                        for (ci=0 ; ci<cil ; ci++)
                             if (this[i] === children[ci]) {
-                                delete this[i] ;
+                                deleted.push(i) ;
                                 break ;
                             }
-                        }
-                    }
 
-                    for (i=0 ; i<ci ; i++) {
-                        if (!this[i]) {
-                            if (i !== ci-1) this[i] = this[i+1] ;
-                            this.length-- ;
-                        }
-                    }
+                    var d = deleted.length ;
+                    while (d--)
+                        Array.prototype.splice.call(this, deleted[d], 1) ;
                 }
-                else
-                    while (this.length--)
-                        delete this[this.length] ;
+                else {
+                    while (this.length)
+                        delete this[this.length--] ;
+                }
 
                 return this ;
             },
@@ -141,6 +138,11 @@ void function(root) {
                         child.parentNode.removeChild(child) ;
 
                 return this ;
+            },
+
+            clone : function()
+            {
+                return new DOMElementSet().merge(this) ;
             },
 
             merge : function()
@@ -821,8 +823,9 @@ void function(root) {
 
         ready : function(fn)
         {
-            NODE_EXISTS ?
-                document.addEventListener('DOMContentLoaded', function() { fn() ; }, false) :
+            if (NODE_EXISTS)
+                document.addEventListener('DOMContentLoaded', function() { fn() ; }, false) ;
+            else
                 document.attachEvent("onreadystatechange", function() {
                     if (document.readyState === 'complete') fn() ;
                 }) ;
