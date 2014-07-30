@@ -3,8 +3,8 @@
  * Domes library
  *
  * @author      Thomas Josseau
- * @version     0.0.8
- * @date        2014.07.10
+ * @version     0.0.9
+ * @date        2014.07.30
  * @link        https://github.com/tjosseau/domes
  *
  * @description
@@ -645,6 +645,16 @@ void function(root) {
                 }
 
                 return this ;
+            },
+
+            show : function()
+            {
+                this.style('display', "") ;
+            },
+
+            hide : function()
+            {
+                this.style('display', "none") ;
             },
 
             on : NODE_EXISTS ?
