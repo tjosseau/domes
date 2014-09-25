@@ -3,8 +3,8 @@
  * Domes library
  *
  * @author      Thomas Josseau
- * @version     0.0.9
- * @date        2014.07.30
+ * @version     0.0.10
+ * @date        2014.09.25
  * @link        https://github.com/tjosseau/domes
  *
  * @description
@@ -82,8 +82,7 @@ void function(root) {
             return elset ;
         } ;
 
-    var DOMElementSet = function()
-    {
+    var DOMElementSet = function() {
         copy(this, {
             length : 0,
             events : []
@@ -224,7 +223,7 @@ void function(root) {
                     l = this.length-1,
                     e = -1 ;
                 while (e++ < l)
-                    set.add(this[echo(e)].parentNode) ;
+                    set.add(this[e].parentNode) ;
 
                 return set ;
             },
@@ -650,27 +649,50 @@ void function(root) {
             show : function()
             {
                 this.style('display', "") ;
+
+                return this ;
             },
 
             hide : function()
             {
                 this.style('display', "none") ;
+
+                return this ;
             },
 
             on : NODE_EXISTS ?
-                function(event, fn)
+                function(events, fn)
                 {
-                    var l = this.length ;
-                    while (l--)
-                        this[l].addEventListener(event, fn, false) ;
+                    if (typeof events === 'object') {
+                        for (var e in events)
+                            this.on(e, events[e]) ;
+                        return ;
+                    }
 
-                    this.events[event] = fn ;
+                    events = events.split(' ') ;
+                    var l = this.length,
+                        e = events.length ;
+                    while (e--) {
+                        l = this.length ;
+                        while (l--)
+                            this[l].addEventListener(events[e], fn, false) ;
+
+                        this.events[events[e]] = fn ;
+                    }
 
                     return this ;
                 } :
-                function(event, fn)
+                function(events, fn)
                 {
+                    if (typeof events === 'object') {
+                        for (var e in events)
+                            this.on(e, events[e]) ;
+                        return ;
+                    }
+                    
+                    events = events.split(' ') ;
                     var l = this.length,
+                        e = events.length,
                         _fn = function() {
                             var e = window.event ;
                             return fn.call(this, copy(e, {
@@ -680,32 +702,57 @@ void function(root) {
                                 stopPropagation : function() { e.cancelBubble = true ; }
                             })) ;
                         } ;
-                    while (l--)
-                        this[l].attachEvent('on'+event, _fn) ;
+                    while (e--) {
+                        l = this.length ;
+                        while (l--)
+                            this[l].attachEvent('on'+events[e], _fn) ;
 
-                    this.events[event] = _fn ;
+                        this.events[events[e]] = _fn ;
+                    }
 
                     return this ;
                 },
 
             off : NODE_EXISTS ?
-                function(event, fn)
+                function(events, fn)
                 {
-                    var l = this.length ;
-                    while (l--)
-                        this[l].removeEventListener(event, fn || this.events[event], false) ;
+                    if (typeof events === 'object') {
+                        for (var e in events)
+                            this.off(e, events[e]) ;
+                        return ;
+                    }
 
-                    delete this.events[event] ;
+                    events = events.split(' ') ;
+                    var l = this.length,
+                        e = events.length ;
+                    while (e--) {
+                        l = this.length ;
+                        while (l--)
+                            this[l].removeEventListener(events[e], fn || this.events[events[e]], false) ;
+
+                        delete this.events[events[e]] ;
+                    }
 
                     return this ;
                 } :
-                function(event, fn)
+                function(events, fn)
                 {
-                    var l = this.length ;
-                    while (l--)
-                        this[l].detachEvent('on'+event, fn || this.events[event]) ;
+                    if (typeof events === 'object') {
+                        for (var e in events)
+                            this.off(e, events[e]) ;
+                        return ;
+                    }
 
-                    delete this.events[event] ;
+                    events = events.split(' ') ;
+                    var l = this.length,
+                        e = events.length ;
+                    while (e--) {
+                        l = this.length ;
+                        while (l--)
+                            this[l].detachEvent('on'+events[e], fn || this.events[events[e]]) ;
+
+                        delete this.events[events[e]] ;
+                    }
 
                     return this ;
                 },
@@ -732,12 +779,12 @@ void function(root) {
             {
                 if (!this.length) return null ;
                 
-                var l = this.length-1,
+                var _l = this.length-1,
                     bounds ;
                 if (arrayOrCalc === true) {
                     var e = -1,
                         boundsArray = [] ;
-                    while (e++ < l) {
+                    while (e++ < _l) {
                         bounds = this[e].getBoundingClientRect() ;
                         if (NODE_EXISTS) boundsArray.push(bounds) ;
                         else boundsArray.push({
@@ -752,14 +799,14 @@ void function(root) {
                     return boundsArray ;
                 }
                 else if (arrayOrCalc === false) {
-                    bounds = this[l].getBoundingClientRect() ;
+                    bounds = this[_l].getBoundingClientRect() ;
                     
                     var t = bounds.top,
                         r = bounds.right,
                         b = bounds.bottom,
                         l = bounds.left ;
-                    while (l--) {
-                        bounds = this[l].getBoundingClientRect() ;
+                    while (_l--) {
+                        bounds = this[_l].getBoundingClientRect() ;
                         if (bounds.top < t) t = bounds.top ;
                         if (bounds.right > r) r = bounds.right ;
                         if (bounds.bottom > b) b = bounds.bottom ;
@@ -833,10 +880,13 @@ void function(root) {
 
         ready : function(fn)
         {
+            if (document.readyState === 'complete') return fn() ;
+            
             if (NODE_EXISTS)
                 document.addEventListener('DOMContentLoaded', function() { fn() ; }, false) ;
             else
                 document.attachEvent("onreadystatechange", function() {
+                    echo(document.readyState) ;
                     if (document.readyState === 'complete') fn() ;
                 }) ;
         }
