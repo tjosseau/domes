@@ -3,18 +3,19 @@
  * Domes library
  *
  * @author      Thomas Josseau
- * @version     0.0.10
- * @date        2014.09.25
+ * @version     0.1.2
+ * @date        2014.09.29
  * @link        https://github.com/tjosseau/domes
  *
  * @description
- *      Tiny DOM elements manager.
+ *      DOM elements manager, nothing less, nothing more.
  */
 
 void function(root) {
-    "use strict" ;
+    // "use strict" ; // Strict mode - Disabled in production
 
     var domes,
+        
         NODE_EXISTS = typeof root.Node !== 'undefined',
         CLASSLIST_EXISTS = "classList" in document.createElement("div"),
         ELEMENT_NODE = 1,
@@ -127,23 +128,7 @@ void function(root) {
 
                 return this ;
             },
-
-            remove : function()
-            {
-                var child,
-                    i = this.length ;
-                while (i--)
-                    if ((child = this[i]).parentNode)
-                        child.parentNode.removeChild(child) ;
-
-                return this ;
-            },
-
-            clone : function()
-            {
-                return new DOMElementSet().merge(this) ;
-            },
-
+            
             merge : function()
             {
                 var a = -1,
@@ -167,9 +152,21 @@ void function(root) {
                 return this ;
             },
 
-            get : function(i)
+            call : function(fnName)
             {
-                return new DOMElementSet().add(this[i]) ;
+                var args = [],
+                    res = [],
+                    a,
+                    al = arguments.length,
+                    i,
+                    il = this.length ;
+
+                for (a=1 ; a<al ; a++)
+                    args.push(arguments[a]) ;
+                for (i=0 ; i<il ; i++)
+                    res.push(this[i][fnName].apply(this[i], args)) ;
+
+                return res ;
             },
 
             contains : function(element)
@@ -180,17 +177,7 @@ void function(root) {
                         return true ;
                 return false ;
             },
-
-            first : function()
-            {
-                return this.get(0) ;
-            },
-
-            last : function()
-            {
-                return this.get(this.length-1) ;
-            },
-
+            
             element : function()
             {
                 return this[0] ;
@@ -207,6 +194,11 @@ void function(root) {
                 return els ;
             },
             
+            nth : function(n)
+            {
+                return new DOMElementSet().add(this[n]) ;
+            },
+            
             each : function(fn)
             {
                 var l = this.length-1,
@@ -215,6 +207,28 @@ void function(root) {
                     fn.call(this[e], this[e], e) ;
                     
                 return this ;
+            },
+            
+            query : function(query)
+            {
+                var set = new DOMElementSet(),
+                    l = this.length-1,
+                    e = -1 ;
+                
+                while (e++ < l)
+                    queryTo(this[e], set, query) ;
+                
+                return set ;
+            },
+
+            first : function()
+            {
+                return this.nth(0) ;
+            },
+
+            last : function()
+            {
+                return this.nth(this.length-1) ;
             },
 
             parent : function()
@@ -246,70 +260,137 @@ void function(root) {
                 return set ;
             },
 
-            next : NODE_EXISTS ?
-                function()
-                {
-                    var set = new DOMElementSet(),
-                        l = this.length-1,
-                        e = -1 ;
-                    while (e++ < l)
-                        set.add(this[e].nextElementSibling) ;
-
-                    return set ;
-                } :
-                function()
-                {
-                    var set = new DOMElementSet(),
-                        l = this.length-1,
-                        el,
-                        e = -1 ;
-                    while (e++ < l) {
-                        el = this[e] ;
-                        do { el = el.nextSibling ; } while (el && el.nodeType !== ELEMENT_NODE) ;
-                        set.add(el) ;
-                    }
-
-                    return set ;
-                },
-
-            previous : NODE_EXISTS ?
-                function()
-                {
-                    var set = new DOMElementSet(),
-                        l = this.length-1,
-                        e = -1 ;
-                    while (e++ < l)
-                        set.add(this[e].previousElementSibling) ;
-
-                    return set ;
-                } :
-                function()
-                {
-                    var set = new DOMElementSet(),
-                        l = this.length-1,
-                        el,
-                        e = -1 ;
-                    while (e++ < l) {
-                        el = this[e] ;
-                        do { el = el.previousSibling ; } while (el && el.nodeType !== ELEMENT_NODE) ;
-                        set.add(el) ;
-                    }
-
-                    return set ;
-                },
-            
-            query : function(query)
+            append : function()
             {
-                var set = new DOMElementSet(),
+                var a = -1,
+                    al = arguments.length-1,
+                    el,
+                    l = this.length-1,
+                    e ;
+                
+                while (a++ < al) {
+                    e = -1 ;
+                    el = arguments[a] ;
+                    
+                    if (typeof el === 'string')
+                        while (e++ < l)
+                            this[e].insertAdjacentHTML('beforeend', el) ;
+                    else {
+                        var target = this[l] ;
+                        if (el.nodeType === ELEMENT_NODE)
+                            target.appendChild(el) ;
+                        else if (el instanceof DOMElementSet) {
+                            l = el.length-1 ;
+                            while (e++ < l)
+                                target.appendChild(el[e]) ;
+                        }
+                    }
+                }
+
+                return this ;
+            },
+
+            prepend : function()
+            {
+                var a = -1,
+                    al = arguments.length-1,
+                    el,
                     l = this.length-1,
                     e = -1 ;
                 
-                while (e++ < l)
-                    queryTo(this[e], set, query) ;
-                
-                return set ;
+                while (a++ < al) {
+                    e = -1 ;
+                    el = arguments[a] ;
+                    
+                    if (typeof el === 'string')
+                        while (e++ < l)
+                            this[e].insertAdjacentHTML('afterbegin', el) ;
+                    else {
+                        var target = this[l] ;
+                        if (el.nodeType === ELEMENT_NODE)
+                            target.insertBefore(el, target.firstChild) ;
+                        else if (el instanceof DOMElementSet) {
+                            e = el.length ;
+                            while (e--)
+                                target.insertBefore(el[e], target.firstChild) ;
+                        }
+                    }
+                }
+
+                return this ;
             },
 
+            before : function()
+            {
+                var a = -1,
+                    al = arguments.length-1,
+                    el,
+                    l = this.length-1,
+                    e = -1 ;
+                
+                while (a++ < al) {
+                    e = -1 ;
+                    el = arguments[a] ;
+
+                    if (typeof el === 'string')
+                        while (e++ < l)
+                            this[e].insertAdjacentHTML('beforebegin', el) ;
+                    else {
+                        var target = this[l] ;
+                        if (el.nodeType === ELEMENT_NODE)
+                            target.parentNode.insertBefore(el, target) ;
+                        else if (el instanceof DOMElementSet) {
+                            e = el.length ;
+                            while (e--)
+                                target.parentNode.insertBefore(el[e], target) ;
+                        }
+                    }
+                }
+
+                return this ;
+            },
+
+            after : function()
+            {
+                var a = -1,
+                    al = arguments.length-1,
+                    el,
+                    l = this.length-1,
+                    e = -1 ;
+                
+                while (a++ < al) {
+                    e = -1 ;
+                    el = arguments[a] ;
+
+                    if (typeof el === 'string')
+                        while (e++ < l)
+                            this[e].insertAdjacentHTML('afterend', el) ;
+                    else {
+                        var target = this[l] ;
+                        if (el.nodeType === ELEMENT_NODE)
+                            target.parentNode.insertBefore(el, target.nextSibling) ;
+                        else if (el instanceof DOMElementSet) {
+                            e = el.length ;
+                            while (e--)
+                                target.parentNode.insertBefore(el[e], target.nextSibling) ;
+                        }
+                    }
+                }
+
+                return this ;
+            },
+            
+            remove : function()
+            {
+                var child,
+                    i = this.length ;
+                while (i--)
+                    if ((child = this[i]).parentNode)
+                        child.parentNode.removeChild(child) ;
+
+                return this ;
+            },
+            
             type : function()
             {
                 if (!this.length) return '' ;
@@ -325,7 +406,7 @@ void function(root) {
 
                 return type.toLowerCase() ;
             },
-
+            
             outer : function(el)
             {
                 var l = this.length-1,
@@ -386,115 +467,6 @@ void function(root) {
                 return this ;
             },
 
-            empty : function()
-            {
-                this.inner("") ;
-
-                return this ;
-            },
-
-            append : function(el)
-            {
-                var l = this.length-1,
-                    e = -1 ;
-
-                if (typeof el === 'string')
-                    while (e++ < l)
-                        this[e].insertAdjacentHTML('beforeend', el) ;
-                else {
-                    var target = this[l] ;
-                    if (el.nodeType === ELEMENT_NODE)
-                        target.appendChild(el) ;
-                    else if (el instanceof DOMElementSet) {
-                        l = el.length-1 ;
-                        while (e++ < l)
-                            target.appendChild(el[e]) ;
-                    }
-                }
-
-                return this ;
-            },
-
-            appendTo : function(el)
-            {
-                domes(el).append(this) ;
-
-                return this ;
-            },
-
-            prepend : function(el)
-            {
-                var l = this.length-1,
-                    e = -1 ;
-
-                if (typeof el === 'string')
-                    while (e++ < l)
-                        this[e].insertAdjacentHTML('afterbegin', el) ;
-                else {
-                    var target = this[l] ;
-                    if (el.nodeType === ELEMENT_NODE)
-                        target.insertBefore(el, target.firstChild) ;
-                    else if (el instanceof DOMElementSet) {
-                        e = el.length ;
-                        while (e--)
-                            target.insertBefore(el[e], target.firstChild) ;
-                    }
-                }
-
-                return this ;
-            },
-
-            prependTo : function(el)
-            {
-                domes(el).prepend(this) ;
-
-                return this ;
-            },
-
-            before : function(el)
-            {
-                var l = this.length-1,
-                    e = -1 ;
-
-                if (typeof el === 'string')
-                    while (e++ < l)
-                        this[e].insertAdjacentHTML('beforebegin', el) ;
-                else {
-                    var target = this[l] ;
-                    if (el.nodeType === ELEMENT_NODE)
-                        target.parentNode.insertBefore(el, target) ;
-                    else if (el instanceof DOMElementSet) {
-                        e = el.length ;
-                        while (e--)
-                            target.parentNode.insertBefore(el[e], target) ;
-                    }
-                }
-
-                return this ;
-            },
-
-            after : function(el)
-            {
-                var l = this.length-1,
-                    e = -1 ;
-
-                if (typeof el === 'string')
-                    while (e++ < l)
-                        this[e].insertAdjacentHTML('afterend', el) ;
-                else {
-                    var target = this[l] ;
-                    if (el.nodeType === ELEMENT_NODE)
-                        target.parentNode.insertBefore(el, target.nextSibling) ;
-                    else if (el instanceof DOMElementSet) {
-                        e = el.length ;
-                        while (e--)
-                            target.parentNode.insertBefore(el[e], target.nextSibling) ;
-                    }
-                }
-
-                return this ;
-            },
-
             text : function(str)
             {
                 var l = this.length-1,
@@ -511,6 +483,13 @@ void function(root) {
                         texts.push(this[e].innerText) ;
                     return str === true ? texts : texts.join("") ;
                 }
+
+                return this ;
+            },
+            
+            empty : function()
+            {
+                this.inner("") ;
 
                 return this ;
             },
@@ -646,20 +625,6 @@ void function(root) {
                 return this ;
             },
 
-            show : function()
-            {
-                this.style('display', "") ;
-
-                return this ;
-            },
-
-            hide : function()
-            {
-                this.style('display', "none") ;
-
-                return this ;
-            },
-
             on : NODE_EXISTS ?
                 function(events, fn)
                 {
@@ -755,86 +720,7 @@ void function(root) {
                     }
 
                     return this ;
-                },
-
-            focus : function()
-            {
-                var l = this.length ;
-                while (l--)
-                    this[l].focus() ;
-
-                return this ;
-            },
-
-            blur : function()
-            {
-                var l = this.length ;
-                while (l--)
-                    this[l].blur() ;
-
-                return this ;
-            },
-
-            bounds : function(arrayOrCalc)
-            {
-                if (!this.length) return null ;
-                
-                var _l = this.length-1,
-                    bounds ;
-                if (arrayOrCalc === true) {
-                    var e = -1,
-                        boundsArray = [] ;
-                    while (e++ < _l) {
-                        bounds = this[e].getBoundingClientRect() ;
-                        if (NODE_EXISTS) boundsArray.push(bounds) ;
-                        else boundsArray.push({
-                            top : bounds.top,
-                            right : bounds.right,
-                            bottom : bounds.bottom,
-                            left : bounds.left,
-                            width : bounds.right - bounds.left,
-                            height : bounds.bottom - bounds.top
-                        }) ;
-                    }
-                    return boundsArray ;
                 }
-                else if (arrayOrCalc === false) {
-                    bounds = this[_l].getBoundingClientRect() ;
-                    
-                    var t = bounds.top,
-                        r = bounds.right,
-                        b = bounds.bottom,
-                        l = bounds.left ;
-                    while (_l--) {
-                        bounds = this[_l].getBoundingClientRect() ;
-                        if (bounds.top < t) t = bounds.top ;
-                        if (bounds.right > r) r = bounds.right ;
-                        if (bounds.bottom > b) b = bounds.bottom ;
-                        if (bounds.left < l) l = bounds.left ;
-                    }
-                    // Returns a ClientRect type.
-                    return {
-                        top : t,
-                        right : r,
-                        bottom : b,
-                        left : l,
-                        width : r-l,
-                        height : b-t
-                    } ;
-                }
-                else {
-                    bounds = this[0].getBoundingClientRect() ;
-                    if (NODE_EXISTS) return bounds ;
-                    else return {
-                        top : bounds.top,
-                        right : bounds.right,
-                        bottom : bounds.bottom,
-                        left : bounds.left,
-                        width : bounds.right - bounds.left,
-                        height : bounds.bottom - bounds.top
-                    } ;
-                }
-            }
         }
     }) ;
 
@@ -845,6 +731,7 @@ void function(root) {
             return domes.gather.apply(domes, arguments) ;
     } ;
     copy(domes, {
+        instance : DOMElementSet,
         fn : DOMElementSet.prototype,
 
         create : function(type, ns)
