@@ -3,8 +3,8 @@
  * Domes library - Extended version
  *
  * @author      Thomas Josseau
- * @version     0.1.2
- * @date        2014.09.29
+ * @version     0.1.3
+ * @date        2014.10.01
  * @link        https://github.com/tjosseau/domes
  *
  * @description
@@ -29,6 +29,14 @@ void function(root) {
                 if (object.propertyIsEnumerable(p))
                     context[p] = object[p] ;
             return context ;
+        },
+
+        getUniqueId = function(id, n)
+        {
+            var uid = id+""+n ;
+            if (document.getElementById(uid)) return getUniqueId(id, n+1) ;
+
+            return uid ;
         } ;
     
     copy(domes, {
@@ -121,6 +129,16 @@ void function(root) {
             var sibs = this.parent().children() ;
             if (!includeItself) sibs.trim.apply(sibs, this.elements()) ;
             return sibs ;
+        },
+        
+        clone : function(key)
+        {
+            return domes.create(this.outer().replace(
+                /id="(.*?)"/g,
+                key === false ? '' : function(match, p, offset, string) {
+                    return 'id="' + (key == null ? getUniqueId(p+'_', 2) : p+""+key) + '"' ;
+                }
+            )) ;
         },
 
         appendTo : function(el)

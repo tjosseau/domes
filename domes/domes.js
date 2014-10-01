@@ -3,8 +3,8 @@
  * Domes library
  *
  * @author      Thomas Josseau
- * @version     0.1.2
- * @date        2014.09.29
+ * @version     0.1.3
+ * @date        2014.10.01
  * @link        https://github.com/tjosseau/domes
  *
  * @description
@@ -678,6 +678,15 @@ void function(root) {
                     return this ;
                 },
 
+            onto : function(filter, events, fn)
+            {
+                var parent = this ;
+                this.on(events, function(e) {
+                    if (parent.query(filter).contains(e.target))
+                        fn.apply(e.target, arguments) ;
+                }) ;
+            },
+
             off : NODE_EXISTS ?
                 function(events, fn)
                 {
@@ -739,17 +748,25 @@ void function(root) {
             var elset = new DOMElementSet() ;
 
             if (type) {
-                if (ns) elset.add(document.createElementNS(ns, type)) ;
-                else
-                    switch (type) {
-                        case 'svg' :
-                            elset.add(document.createElementNS("http://www.w3.org/2000/svg", type)) ;
-                            break ;
+                if (type[0] === '<') {
+                    var ctn = document.createElement('div') ;
+                    ctn.innerHTML = type ;
+                    for (var c=0, cl=ctn.childNodes.length ; c<cl ; c++)
+                        elset.add(ctn.childNodes[c]) ;
+                }
+                else {
+                    if (ns) elset.add(document.createElementNS(ns, type)) ;
+                    else
+                        switch (type) {
+                            case 'svg' :
+                                elset.add(document.createElementNS("http://www.w3.org/2000/svg", type)) ;
+                                break ;
 
-                        default :
-                            elset.add(document.createElement(type)) ;
-                            break ;
-                    }
+                            default :
+                                elset.add(document.createElement(type)) ;
+                                break ;
+                        }
+                }
             }
 
             return elset ;
