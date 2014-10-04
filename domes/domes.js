@@ -3,8 +3,8 @@
  * Domes library
  *
  * @author      Thomas Josseau
- * @version     0.1.3
- * @date        2014.10.01
+ * @version     0.1.4
+ * @date        2014.10.05
  * @link        https://github.com/tjosseau/domes
  *
  * @description
@@ -734,14 +734,30 @@ void function(root) {
     }) ;
 
     domes = root.domes = function(arg) {
-        if (typeof arg === 'string')
-            return domes.query.apply(domes, arguments) ;
+        if (typeof arg === 'string') {
+            if (arg[0] === '<')
+                return domes.create.apply(domes, arguments) ;
+            else
+                return domes.query.apply(domes, arguments) ;
+        }
         else
             return domes.gather.apply(domes, arguments) ;
     } ;
     copy(domes, {
         instance : DOMElementSet,
         fn : DOMElementSet.prototype,
+
+        ready : function(fn)
+        {
+            if (document.readyState === 'complete') return fn() ;
+            
+            if (NODE_EXISTS)
+                document.addEventListener('DOMContentLoaded', function() { fn() ; }, false) ;
+            else
+                document.attachEvent("onreadystatechange", function() {
+                    if (document.readyState === 'complete') fn() ;
+                }) ;
+        },
 
         create : function(type, ns)
         {
@@ -772,27 +788,14 @@ void function(root) {
             return elset ;
         },
 
-        gather : function()
-        {
-            return new DOMElementSet().merge(arguments) ;
-        },
-
         query : function(query)
         {
             return queryTo(document, new DOMElementSet(), query) ;
         },
 
-        ready : function(fn)
+        gather : function()
         {
-            if (document.readyState === 'complete') return fn() ;
-            
-            if (NODE_EXISTS)
-                document.addEventListener('DOMContentLoaded', function() { fn() ; }, false) ;
-            else
-                document.attachEvent("onreadystatechange", function() {
-                    echo(document.readyState) ;
-                    if (document.readyState === 'complete') fn() ;
-                }) ;
+            return new DOMElementSet().merge(arguments) ;
         }
     }) ;
 

@@ -3,8 +3,8 @@
  * Domes library - Extended version
  *
  * @author      Thomas Josseau
- * @version     0.1.3
- * @date        2014.10.01
+ * @version     0.1.4
+ * @date        2014.10.05
  * @link        https://github.com/tjosseau/domes
  *
  * @description
